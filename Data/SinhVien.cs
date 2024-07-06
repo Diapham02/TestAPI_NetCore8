@@ -1,9 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Test_API.Data
 {
-    [Table("SinhVien")]
+    [Table("SINH_VIEN")]
     public class SinhVien
     {
         // Mã sinh viên (khóa chính)
@@ -13,7 +14,7 @@ namespace Test_API.Data
 
         // Tên sinh viên
         [Required(ErrorMessage = "Tên sinh viên là bắt buộc")]
-        [StringLength(100, ErrorMessage = "Tên sinh viên không được vượt quá 100 ký tự")]
+        [StringLength(50, ErrorMessage = "Tên sinh viên không được vượt quá 50 ký tự")]
         public string TenSV { get; set; }
 
         // Ngày sinh của sinh viên
@@ -21,14 +22,14 @@ namespace Test_API.Data
 
         // Giới tính của sinh viên
         [StringLength(10, ErrorMessage = "Giới tính không được vượt quá 10 ký tự")]
+        [RegularExpression("^(Nam|Nữ|Khác)$", ErrorMessage = "Giới tính không hợp lệ")]
         public string GioiTinh { get; set; }
 
-        // Mã khoa của sinh viên là 1 khoá ngoại 
-        [Required(ErrorMessage = "Mã khoa là bắt buộc")]
-        [StringLength(10, ErrorMessage = "Mã khoa không được vượt quá 10 ký tự")]
-        public string? MaKhoa { get; set; }
-        //FK 
-        //[ForeignKey("MaKhoa")]
-        //public Khoa Khoa { get; set; }
+        //FK tham chiếu đến khoá chính
+        public int KhoaId { get; set; }
+
+        // Đối tượng Khoa tương ứng với KhoaId
+        [JsonIgnore]
+        public virtual Khoa? Khoa { get; set; }
     }
 }

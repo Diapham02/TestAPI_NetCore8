@@ -20,44 +20,76 @@ namespace Test_API.Controllers
         [HttpGet("Lấy list sinh viên")]
         public async Task<ActionResult<IEnumerable<SinhVien>>> GetSinhViens()
         {
-            return await _context.SinhViens!.ToListAsync();
+            var sinhViens = await _context.SinhViens.Select(sv => new
+            {
+                sv.MaSV,
+                sv.TenSV,
+                sv.GioiTinh,
+                sv.NgaySinh,
+                sv.Khoa.TenKhoa,
+            }).ToListAsync();
+            return Ok(sinhViens);
         }
 
         // GET: api/SinhViens/5
         // Hiển thị sinh viên theo mã SV
         [HttpGet("Search sinh viên theo MaSV")]
-        public async Task<ActionResult<SinhVien>> GetSinhVien(int id)
+        public async Task<ActionResult<IEnumerable<SinhVien>>> GetSinhVien(int id)
         {
-            var SvFinder = await _context.SinhViens!.FindAsync(id);
-            //Neu null tra lai Ko thay
-            if (SvFinder == null)
+            var sinhVien = await _context.SinhViens
+                .Where(sv => sv.MaSV == id)
+                .Select(sv => new
+                {
+                    sv.MaSV,
+                    sv.TenSV,
+                    sv.GioiTinh,
+                    sv.NgaySinh,
+                    sv.Khoa.TenKhoa // Lấy tên khoa
+                })
+                .ToListAsync();
+
+            if (sinhVien == null || !sinhVien.Any())
             {
                 return NotFound();
             }
-            return SvFinder;
+
+            return Ok(sinhVien);
         }
+
 
         // GET: api/SinhViens/5
         // Hiển thị sinh viên bằng nhiều trường đầu vào 
-        [HttpGet("Search sinh viên theo TenSV, MaKhoa, NgaySinh")]
+        [HttpGet("Search sinh viên theo TenSV, MaKhoa")]
         public async Task<ActionResult<IEnumerable<SinhVien>>> Searching(string keyword)
         {
             var query = _context.SinhViens.AsQueryable();
+            //Lấy key để tìm
             if (!string.IsNullOrEmpty(keyword))
             {
-                query = query.Where(sv => sv.TenSV.ToLower().ToString().Contains(keyword)
-                || sv.MaKhoa.ToLower().ToString().Contains(keyword)
-                || sv.NgaySinh.ToString().Contains(keyword));
+                query = query.Where(sv =>
+                sv.MaSV.ToString().Contains(keyword) ||
+                sv.TenSV.ToLower().Contains(keyword) ||
+                sv.KhoaId.ToString().Contains(keyword) ||
+                sv.GioiTinh.ToString().Contains(keyword) ||
+                sv.Khoa.TenKhoa.ToLower().ToString().Contains(keyword));
             }
+            //Ket qua hien thi
+            var results = await query.Select(sv => new
+            {
+                sv.MaSV,
+                sv.TenSV,
+                sv.GioiTinh,
+                sv.NgaySinh,
+                sv.Khoa.TenKhoa,
+            }).ToListAsync();
 
-            var results = await query.ToListAsync();
-
+            //NEU DAU VAO 0 CO J THI NOTFOUND
             if (results.Count == 0)
             {
                 return NotFound();
             }
 
-            return results;
+            return Ok(results);
         }
 
 
@@ -76,12 +108,11 @@ namespace Test_API.Controllers
                     return BadRequest();
                 }
 
-                // thay doi tt
+                // Thay doi tt
                 Exist.TenSV = sinhVien.TenSV;
                 Exist.NgaySinh = sinhVien.NgaySinh;
-                Exist.MaKhoa = sinhVien.MaKhoa;
                 Exist.GioiTinh = sinhVien.GioiTinh;
-                //Save data and push db
+                //Save data va push db
                 await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
@@ -94,29 +125,19 @@ namespace Test_API.Controllers
         // POST: api/SinhViens
         // Them sinh vien
         [HttpPost("Thêm sinh viên")]
-        public async Task<ActionResult<SinhVien>> PostSinhVien(SinhVien sinhVien)
+        public async Task<ActionResult<SinhVien>> ThemSinhVien(SinhVien sinhVien)
         {
-            try
+            var khoaExists = await _context.Khoas.AnyAsync(k => k.KhoaId == sinhVien.KhoaId);
+            if (!khoaExists)
             {
-                // Không cần gán MaSV nữa vì đã có IDENTITY
-                sinhVien.MaSV = 0;
-
-                _context.SinhViens.Add(sinhVien);
-                await _context.SaveChangesAsync();
-
-                // Lấy MaSV mới được tạo từ cơ sở dữ liệu
-                int newMaSV = sinhVien.MaSV; // Entity Framework sẽ tự động cập nhật giá trị MaSV sau khi lưu
-
-                return CreatedAtAction(nameof(GetSinhVien), new { id = newMaSV }, sinhVien);
+                return BadRequest("KhoaId không hợp lệ.");
             }
-            catch (Exception) // Bắt các lỗi khác
-            {
-                // Ghi log lỗi hoặc xử lý tùy theo yêu cầu
-                return StatusCode(500, "Lỗi trong quá trình thêm sinh viên.");
-            }
+
+            _context.SinhViens.Add(sinhVien);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("ThemSinhVien", new { maSV = sinhVien.MaSV }, sinhVien);
         }
-
-
 
 
         // DELETE: api/SinhViens/5

@@ -22,6 +22,26 @@ namespace Test_API.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Test_API.Data.Khoa", b =>
+                {
+                    b.Property<int>("KhoaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MaKhoa")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("TenKhoa")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("KhoaId");
+
+                    b.ToTable("KHOA");
+                });
+
             modelBuilder.Entity("Test_API.Data.SinhVien", b =>
                 {
                     b.Property<int>("MaSV")
@@ -35,22 +55,38 @@ namespace Test_API.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
-                    b.Property<string>("MaKhoa")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                    b.Property<int>("KhoaId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("NgaySinh")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("TenSV")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("MaSV");
 
-                    b.ToTable("SinhVien");
+                    b.HasIndex("KhoaId");
+
+                    b.ToTable("SINH_VIEN");
+                });
+
+            modelBuilder.Entity("Test_API.Data.SinhVien", b =>
+                {
+                    b.HasOne("Test_API.Data.Khoa", "Khoa")
+                        .WithMany("SinhViens")
+                        .HasForeignKey("KhoaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Khoa");
+                });
+
+            modelBuilder.Entity("Test_API.Data.Khoa", b =>
+                {
+                    b.Navigation("SinhViens");
                 });
 #pragma warning restore 612, 618
         }

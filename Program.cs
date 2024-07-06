@@ -27,6 +27,15 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+//Data seeding
+using (var scope = app.Services.CreateScope()) // Tạo một scope mới để quản lý vòng đời của các dịch vụ
+{
+    var services = scope.ServiceProvider;    // Lấy các dịch vụ đã được đăng ký
+    var context = services.GetRequiredService<SinhVienContext>(); // Lấy DbContext
+    SeedDB.Init(context);                     // Gọi hàm SeedDB.Init để thực hiện seeding
+}
+
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
