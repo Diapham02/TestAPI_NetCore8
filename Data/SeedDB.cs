@@ -6,12 +6,14 @@ namespace Test_API.Data
     {
         public static void Init(SinhVienContext context)
         {
+            //Phương thức trong LINQ kiểm tra xem có phần tử nào bên trong Collection ko
             if (context.SinhViens.Any())
             {
                 {
                     return;
                 }
             }
+
             //Seed Khoa
             var khoas = new Khoa[]
             {
@@ -19,7 +21,7 @@ namespace Test_API.Data
                 new Khoa {KhoaId = 1 ,MaKhoa = "ĐTVT" , TenKhoa = "Điện tử viễn thông" },
             };
             //Them Khoa vao db
-            context.Khoas.AddRange(khoas);
+            context.Khoas.AddRange(khoas); // Thêm data vào bộ nhớ tạm của context trước khi gọi SaveChanges
             context.SaveChanges();
 
 
@@ -47,7 +49,6 @@ namespace Test_API.Data
     new SinhVien{TenSV = "Phan Thị Mai", NgaySinh = DateTime.Parse("2000/08/26"), GioiTinh = "Nữ", KhoaId = 1 },
     new SinhVien{TenSV = "Hoàng Văn Khải", NgaySinh = DateTime.Parse("2002/12/15"), GioiTinh = "Nam", KhoaId = 0 }
 };
-
             //Thêm Sv vào db
             context.SinhViens.AddRange(sinhViens);
             //Lưu thay đổi vào DB

@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Test_API.Data
 {
-    [Table("SINH_VIEN")]
+    [Table("SINH_VIEN")]//Đặt tên bảng
     public class SinhVien
     {
         // Mã sinh viên (khóa chính)
@@ -15,7 +15,7 @@ namespace Test_API.Data
         // Tên sinh viên
         [Required(ErrorMessage = "Tên sinh viên là bắt buộc")]
         [StringLength(50, ErrorMessage = "Tên sinh viên không được vượt quá 50 ký tự")]
-        public string TenSV { get; set; }
+        public string? TenSV { get; set; }
 
         // Ngày sinh của sinh viên
         public DateTime? NgaySinh { get; set; }
@@ -23,13 +23,12 @@ namespace Test_API.Data
         // Giới tính của sinh viên
         [StringLength(10, ErrorMessage = "Giới tính không được vượt quá 10 ký tự")]
         [RegularExpression("^(Nam|Nữ|Khác)$", ErrorMessage = "Giới tính không hợp lệ")]
-        public string GioiTinh { get; set; }
+        public string? GioiTinh { get; set; }
 
         //FK tham chiếu đến khoá chính
         public int KhoaId { get; set; }
-
         // Đối tượng Khoa tương ứng với KhoaId
-        [JsonIgnore]
+        [JsonIgnore] //Bỏ qua khi thực thi API
         public virtual Khoa? Khoa { get; set; }
     }
 }

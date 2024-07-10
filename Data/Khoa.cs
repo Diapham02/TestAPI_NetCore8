@@ -16,7 +16,7 @@ namespace Test_API.Data
         [StringLength(50, ErrorMessage = "Tên khoa không quá 50 ký tự")]
         public string TenKhoa { get; set; }
 
-        // Danh sách sinh viên thuộc khoa này (mối quan hệ 1-nhiều)
+        // Danh sách sinh viên thuộc khoa này (mối quan hệ 1 - nhiều)
         public virtual ICollection<SinhVien> SinhViens { get; set; }
     }
 }

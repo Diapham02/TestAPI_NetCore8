@@ -4,40 +4,62 @@ using Test_API.Data;
 
 namespace Test_API.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
+    [Route("api/[controller]")] // Định tuyến URL đến controller 
+    [ApiController] //API controller, tự động xác thực model và lỗi
     public class SinhViensController : ControllerBase
     {
         private readonly SinhVienContext _context;
 
+        //Contructor nhận tham số là SinhVienContext gán vào _context 
         public SinhViensController(SinhVienContext context)
         {
-            _context = context;
+            _context = context; // Khai báo class member thuộc SinhVienContext
         }
 
         // GET: api/SinhViens
         //Lấy toàn bộ danh sách sinh viên
-        [HttpGet("Lấy list sinh viên")]
-        public async Task<ActionResult<IEnumerable<SinhVien>>> GetSinhViens()
+        [HttpGet("Get List SinhVien")]
+        public async Task<ActionResult<PaginationList>> GetSinhViens(int PageIndex = 1, int PageSize = 10)
         {
-            var sinhViens = await _context.SinhViens.Select(sv => new
+            // Nếu DbContext không có dữ liệu thì trả về NotFound
+            if (_context.SinhViens == null)
             {
-                sv.MaSV,
-                sv.TenSV,
-                sv.GioiTinh,
-                sv.NgaySinh,
-                sv.Khoa.TenKhoa,
-            }).ToListAsync();
-            return Ok(sinhViens);
+                return NotFound();
+            }
+            var query = _context.SinhViens.AsQueryable();// tạo truy vấn IQueryable để có thể áp dụng các thao tác LINQ sau này
+            // Phân trang
+            if (PageIndex < 1)
+            {
+                PageIndex = 1;
+            }
+
+            // Tổng số mục trong truy vấn
+            int TotalItem = await query.CountAsync();
+
+            // Tổng số trang cần thiết, làm tròn lên
+            int TotalPage = (int)Math.Ceiling(TotalItem / (double)PageSize);
+
+            // Áp dụng phân trang bằng cách bỏ qua các mục ở các trang trước và lấy số mục cần thiết
+            query = query.Skip((PageIndex - 1) * PageSize).Take(PageSize);
+
+            // Lấy danh sách kết quả sau khi áp dụng phân trang
+            var result = await query.ToListAsync();
+
+            // Tạo đối tượng PaginationList để chứa thông tin phân trang và danh sách kết quả
+            var paginationList = new PaginationList(TotalPage, PageIndex, result);
+
+            // Trả về kết quả với đối tượng PaginationList
+            return Ok(paginationList);
         }
 
+
         // GET: api/SinhViens/5
-        // Hiển thị sinh viên theo mã SV
-        [HttpGet("Search sinh viên theo MaSV")]
-        public async Task<ActionResult<IEnumerable<SinhVien>>> GetSinhVien(int id)
+        // Search sinh viên theo mã SV
+        [HttpGet("Search SinhVien theo MaSV")]
+        public async Task<ActionResult<IEnumerable<SinhVien>>> GetSinhVien(int id) // trả về dữ liệu dưới dạng một danh sách các object
         {
             var sinhVien = await _context.SinhViens
-                .Where(sv => sv.MaSV == id)
+                .Where(sv => sv.MaSV == id) // Lọc id và chọn các thuộc tính cần thiết  
                 .Select(sv => new
                 {
                     sv.MaSV,
@@ -46,23 +68,21 @@ namespace Test_API.Controllers
                     sv.NgaySinh,
                     sv.Khoa.TenKhoa // Lấy tên khoa
                 })
-                .ToListAsync();
-
-            if (sinhVien == null || !sinhVien.Any())
+                .ToListAsync();// Chuyển kết quả thành danh sách và lấy từ db
+            if (sinhVien == null || !sinhVien.Any()) // Nếu rỗng hoặc sai mã sv thì trả về not found
             {
                 return NotFound();
             }
-
             return Ok(sinhVien);
         }
 
 
         // GET: api/SinhViens/5
-        // Hiển thị sinh viên bằng nhiều trường đầu vào 
-        [HttpGet("Search sinh viên theo TenSV, MaKhoa")]
-        public async Task<ActionResult<IEnumerable<SinhVien>>> Searching(string keyword)
+        // Search sinh viên bằng nhiều trường đầu vào 
+        [HttpGet("Search SinhVien theo Keyword")]
+        public async Task<ActionResult<IEnumerable<SinhVien>>> Searching(string keyword, int PageIndex, int PageSize)
         {
-            var query = _context.SinhViens.AsQueryable();
+            var query = _context.SinhViens.AsQueryable(); // 
             //Lấy key để tìm
             if (!string.IsNullOrEmpty(keyword))
             {
@@ -73,30 +93,35 @@ namespace Test_API.Controllers
                 sv.GioiTinh.ToString().Contains(keyword) ||
                 sv.Khoa.TenKhoa.ToLower().ToString().Contains(keyword));
             }
-            //Ket qua hien thi
-            var results = await query.Select(sv => new
-            {
-                sv.MaSV,
-                sv.TenSV,
-                sv.GioiTinh,
-                sv.NgaySinh,
-                sv.Khoa.TenKhoa,
-            }).ToListAsync();
 
-            //NEU DAU VAO 0 CO J THI NOTFOUND
-            if (results.Count == 0)
+            //Phan trang
+            if (PageIndex <= 0)
+            {
+                PageIndex = 0;
+            }
+
+            int TotalItem = await query.CountAsync();
+            int TotalPage = (int)Math.Ceiling(TotalItem / (double)PageSize);// Làm tròn lên 
+
+            query = query.Skip((PageIndex - 1) * PageSize).Take(PageSize);
+
+            //Ket qua hien thi
+            var result = await query.ToListAsync();
+
+            //Nếu đầu vào không có gì thì NotFound
+            if (result.Count == 0)
             {
                 return NotFound();
             }
 
-            return Ok(results);
+            var paginationList = new PaginationList(TotalPage, PageIndex, result);
+
+            return Ok(paginationList);
         }
-
-
 
         // PUT: api/SinhViens/5
         //Chinh sua theo MaSV
-        [HttpPut("Chỉnh sửa sinh viên theo MaSV")]
+        [HttpPut("Edit SinhVien theo MaSV")]
         public async Task<IActionResult> PutSinhVien(SinhVien sinhVien)
         {
             try
@@ -108,14 +133,14 @@ namespace Test_API.Controllers
                     return BadRequest();
                 }
 
-                // Thay doi tt
+                // Thay doi thong tin sv
                 Exist.TenSV = sinhVien.TenSV;
                 Exist.NgaySinh = sinhVien.NgaySinh;
                 Exist.GioiTinh = sinhVien.GioiTinh;
                 //Save data va push db
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException) //Bắt Exception
             {
                 throw;
             }
@@ -124,19 +149,19 @@ namespace Test_API.Controllers
 
         // POST: api/SinhViens
         // Them sinh vien
-        [HttpPost("Thêm sinh viên")]
+        [HttpPost("Add SinhVien")]
         public async Task<ActionResult<SinhVien>> ThemSinhVien(SinhVien sinhVien)
         {
+            //Check xem Khoa nhập vào có trong db chưa
             var khoaExists = await _context.Khoas.AnyAsync(k => k.KhoaId == sinhVien.KhoaId);
             if (!khoaExists)
             {
                 return BadRequest("KhoaId không hợp lệ.");
             }
-
-            _context.SinhViens.Add(sinhVien);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("ThemSinhVien", new { maSV = sinhVien.MaSV }, sinhVien);
+            //Add vào 
+            _context.SinhViens.Add(sinhVien); // Thêm 1 đối tượng sinhVien vào db
+            await _context.SaveChangesAsync(); // Lưu bất đồng bộ 
+            return CreatedAtAction("ThemSinhVien", new { maSV = sinhVien.MaSV }, sinhVien); // Trả về phản hồi sinhvien vừa thêm vào
         }
 
 
@@ -146,19 +171,20 @@ namespace Test_API.Controllers
         public async Task<IActionResult> DeleteSinhViens(string MaSV)
         {
             // Tách chuỗi mã sinh viên thành mảng các ID
-            var idStrings = MaSV.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var idStrings = MaSV.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries); //Loại bỏ rỗng trong kết quả
             var idsToDelete = idStrings.Select(int.Parse).ToList(); // Chuyển đổi thành List<int>
             // Tìm kiếm và xóa sinh viên
             var sinhViensToDelete = await _context.SinhViens
                 .Where(sv => idsToDelete.Contains(sv.MaSV))
                 .ToListAsync();
-
+            // Nếu không được nhập vào
             if (sinhViensToDelete.Count == 0)
             {
                 return NotFound();
             }
+            //Xoá một loạt đối tượng 
             _context.SinhViens.RemoveRange(sinhViensToDelete);
-            //Push lên Db
+            //Lưu vào Db
             await _context.SaveChangesAsync();
             return NoContent();
         }
